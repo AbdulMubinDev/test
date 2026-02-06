@@ -7,8 +7,7 @@ services:
     environment:
       - VITE_API_BASE=/api
     ports:
-<<<<<<< HEAD
-      - "80:80"  # Frontend listens on port 80 (mapped to host 80 for VPS, use 3000:80 for local testing)
+      - "80:80"
     networks:
       - internal_net
 
@@ -17,11 +16,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: blog_backend
-=======
-      - "80:8000"
     env_file:
       - .env
->>>>>>> 910cbdb39ee2cf6f1e5b6a2335e94199ec29eba4
     depends_on:
       - db
       - redis
@@ -75,4 +71,3 @@ networks:
 
 volumes:
   pg_data:
-
