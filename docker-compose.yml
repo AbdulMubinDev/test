@@ -7,13 +7,9 @@ services:
     environment:
       - VITE_API_BASE=/api
     ports:
-<<<<<<< HEAD
-      - "80:80"
-=======
-      - "80:80"  # Frontend listens on port 80
+      - "80:80" 
     depends_on:
       - backend
->>>>>>> 64892491718d52420bd9e1bb5914088700595c8a
     networks:
       - internal_net
 
