@@ -1,207 +1,84 @@
-# VPS Django Test Server
+# Blue & Gold Blog – React + Django + Postgres + Redis
 
-A production-ready Django project configured for testing and deployment on a VPS.
+This is a simple three-page blog platform with a **React** frontend, **Django REST** backend, **PostgreSQL** for persistence, and **Redis** for caching/sessions. All pieces run in Docker containers, including an **internal networking proxy** between the backend and the DB layer.
 
-## Features
+### Pages
 
-- ✅ Production-ready Django configuration
-- ✅ Environment variable management with `.env`
-- ✅ Health check endpoints for server monitoring
-- ✅ Docker support for containerized deployment
-- ✅ Industry-standard project structure
-- ✅ Security best practices
+- **Blogs page (`/`)**: Public list of published blog posts.
+- **Auth page (`/auth`)**: Sign up and login using username/password.
+- **Dashboard page (`/dashboard`)**: Authenticated user dashboard where users can:
+  - Edit their profile (display name + bio)
+  - Create new blogs and decide to publish or keep as draft
+  - Edit their existing blogs (title, content, published flag)
 
-## Quick Start
+### Containers & Architecture
 
-### Prerequisites
+- **`frontend`** (React, Vite, served by nginx inside the container, **listens on port 80**)
+- **`backend`** (Django + Django REST Framework + Gunicorn, listens on port 8000)
+- **`db`** (PostgreSQL, internal-only, no host port exposure)
+- **`redis`** (Redis cache / session store, internal-only)
+- **`internal_proxy`** (nginx in TCP `stream` mode; internal networking router between backend and DB/cache)
 
-- Python 3.10+
-- pip or pip3
-- Virtual environment (recommended)
+**Note**: The public-facing nginx (with DNS, WAF, UFW) runs on your VPS, not in Docker. It proxies to the containers.
 
-### Installation
+### Request Flow (Blog Read)
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd test
-   ```
+When a user reads a blog post list on the public blogs page, the conceptual flow is:
 
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or
-   .\venv\Scripts\activate   # Windows
-   ```
+1. **User request** – browser navigates to the blog URL.
+2. **DNS** – resolves your blog domain to the public entrypoint (e.g. a load balancer / IP).
+3. **WAF** – optional web application firewall in front of the cluster.
+4. **VPS Nginx** (on your VPS, not in Docker) – terminates HTTP and routes:
+   - `/` → `http://127.0.0.1:80` (frontend container)
+   - `/api/` → `http://127.0.0.1:8000` (backend container)
+5. **Frontend** – React app calls `/api/posts/` via VPS nginx.
+6. **VPS Nginx** – proxies `/api/posts/` to the `backend` container on port 8000.
+7. **Backend** – Django REST API queries the DB through the internal proxy:
+   - Connects to `internal_proxy:5432` (Postgres via internal nginx stream)
+   - Optionally uses Redis via `internal_proxy:6379`
+8. **DB / Cache** – Postgres and Redis respond back through `internal_proxy` to the backend.
+9. **Backend** – serializes the blog data as JSON.
+10. **VPS Nginx** – forwards the JSON back to the frontend.
+11. **Frontend** – renders the blogs in a blue & gold themed UI.
+12. **User** – sees the published blogs.
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+In shorthand, this maps closely to your desired workflow:
 
-4. **Configure environment**
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env
-   
-   # Edit .env with your settings
-   nano .env
-   ```
+`user req -> DNS -> WAF -> VPS Nginx -> frontend:80 -> VPS Nginx -> backend:8000 -> internal_proxy -> db/redis -> backend -> VPS Nginx -> frontend (rendered) -> VPS Nginx -> user`
 
-5. **Run database migrations**
-   ```bash
-   python manage.py migrate
-   ```
+### Running Locally
 
-6. **Start the development server**
-   ```bash
-   python manage.py runserver
-   ```
+From the project root:
 
-7. **Access the application**
-   - Main site: http://localhost:8000
-   - Health check: http://localhost:8000/health/
-   - Server status: http://localhost:8000/api/status/
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Django secret key | Auto-generated |
-| `DEBUG` | Debug mode | `True` |
-| `ALLOWED_HOSTS` | Comma-separated host list | `localhost,127.0.0.1` |
-| `DATABASE_URL` | Database connection string | `sqlite:///db.sqlite3` |
-| `STATIC_URL` | Static files URL | `/static/` |
-| `MEDIA_URL` | Media files URL | `/media/` |
-
-## Health Check Endpoints
-
-The application provides the following endpoints for server monitoring:
-
-- `GET /health/` - Returns JSON with server health status
-- `GET /api/status/` - Returns server information and operational status
-
-Example response from `/health/`:
-```json
-{
-    "status": "healthy",
-    "service": "Vps Web Server",
-    "timestamp": "2024-01-01T00:00:00Z",
-    "version": "1.0.0"
-}
-```
-
-## Deployment to VPS
-
-### Option 1: Direct Deployment
-
-1. **Connect to your VPS**
-   ```bash
-   ssh user@your-vps-ip
-   ```
-
-2. **Clone and setup**
-   ```bash
-   git clone <your-repo-url>
-   cd test
-   ```
-
-3. **Configure production settings**
-   ```bash
-   cp .env.example .env
-   # Edit .env with production values
-   nano .env
-   # Set DEBUG=False
-   # Add your domain to ALLOWED_HOSTS
-   ```
-
-4. **Setup with Gunicorn**
-   ```bash
-   pip install gunicorn
-   gunicorn Vps.wsgi:application --bind 0.0.0.0:8000
-   ```
-
-5. **Setup systemd service** (recommended)
-   Create `/etc/systemd/system/gunicorn.service`:
-   ```ini
-   [Unit]
-   Description=gunicorn daemon for Vps project
-   After=network.target
-
-   [Service]
-   User=www-data
-   Group=www-data
-   WorkingDirectory=/path/to/test
-   Environment="PATH=/path/to/test/venv/bin"
-   ExecStart=/path/to/test/venv/bin/gunicorn \
-           --workers 3 \
-           --bind unix:/path/to/test/gunicorn.sock \
-           Vps.wsgi:application
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-### Option 2: Docker Deployment
-
-1. **Build and run with Docker**
-   ```bash
-   docker build -t vps-test-server .
-   docker run -p 8000:8000 --env-file .env vps-test-server
-   ```
-
-2. **Using Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
-
-## Project Structure
-
-```
-test/
-├── Vps/                 # Django project settings
-│   ├── __init__.py
-│   ├── settings.py     # Main settings (development)
-│   ├── urls.py         # URL routing
-│   ├── wsgi.py         # WSGI config
-│   └── asgi.py         # ASGI config
-├── test1/              # Django application
-│   ├── __init__.py
-│   ├── views.py        # Health check views
-│   ├── apps.py
-│   ├── admin.py
-│   ├── models.py
-│   └── tests.py
-├── static/             # Static files (create if needed)
-├── media/              # Uploaded files (create if needed)
-├── templates/          # HTML templates (create if needed)
-├── manage.py           # Django management script
-├── requirements.txt    # Python dependencies
-├── .env               # Environment variables (local)
-├── .env.example       # Environment template
-├── .gitignore         # Git ignore rules
-├── Dockerfile         # Docker configuration
-├── docker-compose.yml # Docker Compose config
-└── README.md          # This file
-```
-
-## Testing
-
-Run the test suite:
 ```bash
-python manage.py test
+./run.sh
 ```
 
-## Security Checklist
+This builds and starts all containers. Then:
+- **Frontend**: `http://localhost:80`
+- **Backend API**: `http://localhost:8000`
 
-- [ ] Change `SECRET_KEY` in production
-- [ ] Set `DEBUG=False` in production
-- [ ] Configure `ALLOWED_HOSTS` with your domain
-- [ ] Use HTTPS in production
-- [ ] Keep dependencies updated
-- [ ] Review logging configuration
+### Testing
 
-## License
+Run the comprehensive test suite to validate everything works before deploying to production:
 
-This project is open source and available under the MIT License.
+```bash
+./test.sh
+```
+
+This runs:
+1. **Backend unit tests** (pytest) - Tests Django API endpoints, models, authentication
+2. **Integration/E2E tests** - Tests full user flows: registration → login → profile → create/edit posts → public visibility
+
+All tests must pass before deploying to your VPS.
+
+### Key Endpoints
+
+- `GET /api/posts/` – public list of published blog posts.
+- `POST /api/auth/register/` – create user.
+- `POST /api/auth/login/` – login (session cookie).
+- `POST /api/auth/logout/` – logout.
+- `GET/PUT /api/auth/me/` – get or update profile.
+- `GET/POST /api/my-posts/` – list or create your own posts.
+- `GET/PUT /api/my-posts/<id>/` – retrieve or update an existing post.
+
