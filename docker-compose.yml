@@ -6,8 +6,8 @@ services:
     container_name: blog_frontend
     environment:
       - VITE_API_BASE=/api
-    ports:
-      - "80:80" 
+    expose:
+      - "80"
     depends_on:
       - backend
     networks:
@@ -65,6 +65,19 @@ services:
     depends_on:
       - db
       - redis
+    networks:
+      - internal_net
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: blog_nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
     networks:
       - internal_net
 

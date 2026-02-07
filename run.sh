@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Building containers (frontend, backend, db, redis, internal_proxy)..."
+echo "Building containers (frontend, backend, db, redis, internal_proxy, nginx)..."
 docker-compose build
 
 echo "Starting containers in the background..."
@@ -50,14 +50,35 @@ if [ $attempt -eq $max_attempts ]; then
     echo "     Check logs with: docker logs blog_backend"
 fi
 
+echo "  Waiting for nginx reverse proxy to be ready..."
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+    if docker exec blog_nginx sh -c "wget -q -O - http://localhost/health" >/dev/null 2>&1; then
+        echo "  ✓ Nginx reverse proxy is ready"
+        break
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+done
+
+if [ $attempt -eq $max_attempts ]; then
+    echo "  ⚠ Nginx not ready after $max_attempts seconds"
+    echo "     Check logs with: docker logs blog_nginx"
+fi
+
 echo
 echo "All services started."
-echo "Frontend: http://localhost:80 (listening on port 80)"
-echo "Backend API: http://localhost:8000"
-echo
-echo "In your VPS nginx configuration, proxy:"
-echo "  - public site (blogs/auth/dashboard) -> http://127.0.0.1:80"
-echo "  - backend API (/api/) -> http://127.0.0.1:8000"
-echo
+echo "============================================"
+echo "  Frontend & API via Nginx: http://localhost:80"
+echo "  Backend API (direct):    http://localhost:8000"
+echo "============================================"
+echo ""
+echo "In production, only port 80 should be exposed."
+echo "The nginx reverse proxy handles all routing:"
+echo "  - / -> frontend (React app)"
+echo "  - /api/* -> backend (Django API)"
+echo ""
 echo "To run tests: ./test.sh"
-
+echo ""
+echo "To stop: docker-compose down"
+echo "To view logs: docker-compose logs -f"

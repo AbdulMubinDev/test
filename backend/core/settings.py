@@ -75,7 +75,25 @@ CACHES = {
     }
 }
 
-SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+# Use Redis for sessions
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+
+# Session cookie settings for cross-origin requests
+SESSION_COOKIE_NAME = "sessionid"
+SESSION_COOKIE_AGE = 86400 * 7  # 1 week
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_DOMAIN = os.environ.get("SESSION_COOKIE_DOMAIN", None)
+SESSION_COOKIE_SECURE = os.environ.get("DEBUG", "1") != "1"  # True in production
+SESSION_COOKIE_HTTPONLY = True
+
+# CSRF settings
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_COOKIE_AGE = 86400 * 7
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_DOMAIN = os.environ.get("CSRF_COOKIE_DOMAIN", None)
+CSRF_COOKIE_SECURE = os.environ.get("DEBUG", "1") != "1"
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost,http://127.0.0.1").split(",")
 
 AUTH_PASSWORD_VALIDATORS = [
     {
