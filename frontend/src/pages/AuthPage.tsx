@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { UserInfo } from "../App";
 
 interface Props {
@@ -11,6 +12,25 @@ export const AuthPage = ({ apiBase, onAuthSuccess }: Props) => {
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showUnauthorizedMessage, setShowUnauthorizedMessage] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user was redirected from unauthorized access
+    if (location.state && (location.state as { from?: string }).from) {
+      setShowUnauthorizedMessage(true);
+      // Clear the state to prevent showing the message on page refresh
+      navigate(location.pathname, { replace: true });
+    }
+
+    // Also check sessionStorage for unauthorized attempt
+    const unauthorizedAttempt = sessionStorage.getItem("unauthorized_attempt_url");
+    if (unauthorizedAttempt) {
+      setShowUnauthorizedMessage(true);
+      sessionStorage.removeItem("unauthorized_attempt_url");
+    }
+  }, [location, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -58,6 +78,12 @@ export const AuthPage = ({ apiBase, onAuthSuccess }: Props) => {
 
   return (
     <section className="auth-section">
+      {showUnauthorizedMessage && (
+        <div className="unauthorized-notice">
+          <span className="unauthorized-notice-icon">⚠️</span>
+          <span>You are not authorized to access that page. Please login first.</span>
+        </div>
+      )}
       <h1 className="page-title">
         {mode === "login" ? "Welcome back" : "Create an account"}
       </h1>
@@ -118,4 +144,3 @@ export const AuthPage = ({ apiBase, onAuthSuccess }: Props) => {
     </section>
   );
 };
-

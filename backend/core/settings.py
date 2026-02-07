@@ -29,6 +29,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.UnauthorizedAccessLoggingMiddleware",  # Log unauthorized access attempts
+    "core.middleware.SecurityHeadersMiddleware",  # Add security headers
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -131,4 +133,13 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
 }
+
+# Security: Disable server header
+# This hides the Django/Gunicorn version from HTTP responses
+DISABLE_SERVER_HEADER = True
+
+# Security: Hide technical information in error pages
+if not DEBUG:
+    # Disable technical error reporting that could reveal stack traces
+    DEBUG_PROPAGATE_EXCEPTIONS = False
 

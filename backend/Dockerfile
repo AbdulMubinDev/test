@@ -14,5 +14,5 @@ COPY . /app/
 
 ENV DJANGO_SETTINGS_MODULE=core.settings
 
-CMD ["sh", "-c", "python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:8000"]
-
+# Run Gunicorn with security hardening and config file
+CMD ["sh", "-c", "python manage.py migrate && gunicorn core.wsgi:application -c /app/gunicorn.conf.py"]

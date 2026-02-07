@@ -1,8 +1,9 @@
-import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
+import { Route, Routes, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { BlogListPage } from "./pages/BlogListPage";
 import { AuthPage } from "./pages/AuthPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 import { Layout } from "./components/Layout";
 
 export interface UserInfo {
@@ -11,6 +12,30 @@ export interface UserInfo {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+
+// Protected route wrapper component
+const ProtectedRoute = ({
+  user,
+  children,
+  redirectUrl,
+}: {
+  user: UserInfo | null;
+  children: React.ReactNode;
+  redirectUrl?: string;
+}) => {
+  const location = useLocation();
+
+  if (!user) {
+    // Store the attempted URL for potential use after login
+    sessionStorage.setItem(
+      "unauthorized_attempt_url",
+      redirectUrl || location.pathname
+    );
+    return <UnauthorizedPage />;
+  }
+
+  return <>{children}</>;
+};
 
 function App() {
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -59,22 +84,27 @@ function App() {
         <Route path="/" element={<BlogListPage apiBase={API_BASE} />} />
         <Route
           path="/auth"
-          element={<AuthPage apiBase={API_BASE} onAuthSuccess={setUser} />}
+          element={
+            user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <AuthPage apiBase={API_BASE} onAuthSuccess={setUser} />
+            )
+          }
         />
         <Route
           path="/dashboard"
           element={
-            user ? (
+            <ProtectedRoute user={user} redirectUrl="/dashboard">
               <DashboardPage apiBase={API_BASE} />
-            ) : (
-              <Navigate to="/auth" replace />
-            )
+            </ProtectedRoute>
           }
         />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
   );
 }
 
 export default App;
-
