@@ -88,7 +88,12 @@ fi
 
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
-    if docker exec blog_nginx wget -q -O - http://localhost/health 2>/dev/null | grep -q "OK"; then
+    # Prefer host curl (nginx image may not have wget)
+    if curl -sf http://127.0.0.1/health 2>/dev/null | grep -q "OK"; then
+        pass "Nginx reverse proxy is ready (port 80)"
+        break
+    fi
+    if docker exec blog_nginx wget -q -O - http://127.0.0.1/health 2>/dev/null | grep -q "OK"; then
         pass "Nginx reverse proxy is ready (port 80)"
         break
     fi

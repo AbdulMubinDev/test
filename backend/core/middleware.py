@@ -44,8 +44,9 @@ class CsrfExemptApiMiddleware(MiddlewareMixin):
 
 class UnauthorizedAccessLoggingMiddleware(MiddlewareMixin):
     """
-    Middleware to log unauthorized access attempts for security monitoring.
-    Persists to AuditLog for admin portal.
+    Log unauthorized access attempts for security monitoring (admin portal).
+    Do not short-circuit: let the view/DRF return 401/403 so session and
+    other auth (e.g. test force_authenticate) work correctly.
     """
 
     PROTECTED_API_PATHS = [
@@ -82,10 +83,8 @@ class UnauthorizedAccessLoggingMiddleware(MiddlewareMixin):
             )
         except Exception:
             pass
-        return JsonResponse(
-            {"detail": "You are not authorized to access this resource"},
-            status=401,
-        )
+        # Do not return 401 here: let the view/DRF enforce auth (401/403)
+        return None
 
 
 class TrafficLoggingMiddleware(MiddlewareMixin):

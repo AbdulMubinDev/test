@@ -54,9 +54,9 @@ From the project root:
 ./run.sh
 ```
 
-This builds and starts all containers. Then:
-- **Frontend**: `http://localhost:80`
-- **Backend API**: `http://localhost:8000`
+This builds and starts all containers. With the default production compose, only port 80 is exposed. Then:
+- **Site (frontend + API)**: `http://localhost`
+- **Admin portal**: `http://localhost/admin`
 
 ### Testing
 
@@ -71,6 +71,11 @@ This runs:
 2. **Integration/E2E tests** - Tests full user flows: registration → login → profile → create/edit posts → public visibility
 
 All tests must pass before deploying to your VPS.
+
+### Security and URL access
+
+- **Protected routes**: `/dashboard` and `/admin` are enforced on both frontend and backend. Visiting them via URL without being logged in shows the login/unauthorized screen; the API returns 401/403 for unauthenticated or unauthorized requests.
+- **No URL manipulation**: Users cannot access another user’s data by changing IDs in the URL; the backend filters all “my-posts” and profile endpoints by the authenticated user.
 
 ### Key Endpoints
 
