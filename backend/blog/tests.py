@@ -25,7 +25,9 @@ def user(db):
 
 @pytest.fixture
 def authenticated_client(api_client, user):
-    api_client.force_authenticate(user=user)
+    # Use session login so AuthenticationMiddleware sets request.user;
+    # middleware and DRF then see an authenticated request.
+    api_client.login(username=user.username, password="testpass123")
     return api_client
 
 
