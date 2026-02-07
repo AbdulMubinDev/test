@@ -1,30 +1,16 @@
-# Gunicorn configuration file
-# Security hardening settings
+# Gunicorn configuration file - security hardening
 
-# Bind address
 bind = "0.0.0.0:8000"
-
-# Worker settings
 workers = 2
 worker_class = "sync"
 timeout = 30
 keepalive = 65
-
-# Logging (disable access log to reduce info leakage)
 accesslog = "/dev/null"
 errorlog = "-"
 loglevel = "warning"
 
-# Security: Disable server header
-# This prevents Gunicorn from showing its version in responses
-def pre_fork(server, worker):
-    pass
+# Hide server identity (no version in Server header)
+import gunicorn
+gunicorn.SERVER_SOFTWARE = ""
 
-def post_fork(server, worker):
-    pass
-
-# Custom header handling
-def on_response(worker, req, environ, resp):
-    # Remove Server header if present
-    if 'Server' in resp.headers:
-        del resp.headers['Server']
+# Remove Server header (Django SecurityHeadersMiddleware also strips it from response)

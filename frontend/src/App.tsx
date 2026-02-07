@@ -4,6 +4,8 @@ import { BlogListPage } from "./pages/BlogListPage";
 import { AuthPage } from "./pages/AuthPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { AdminPage } from "./pages/AdminPage";
 import { Layout } from "./components/Layout";
 
 export interface UserInfo {
@@ -79,31 +81,37 @@ function App() {
   }
 
   return (
-    <Layout user={user} onLogout={handleLogout}>
+    <>
       <Routes>
-        <Route path="/" element={<BlogListPage apiBase={API_BASE} />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/" element={<Layout user={user} onLogout={handleLogout}><BlogListPage apiBase={API_BASE} /></Layout>} />
         <Route
           path="/auth"
           element={
             user ? (
               <Navigate to="/dashboard" replace />
             ) : (
-              <AuthPage apiBase={API_BASE} onAuthSuccess={setUser} />
+              <Layout user={user} onLogout={handleLogout}>
+                <AuthPage apiBase={API_BASE} onAuthSuccess={setUser} />
+              </Layout>
             )
           }
         />
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute user={user} redirectUrl="/dashboard">
-              <DashboardPage apiBase={API_BASE} />
-            </ProtectedRoute>
+            <Layout user={user} onLogout={handleLogout}>
+              <ProtectedRoute user={user} redirectUrl="/dashboard">
+                <DashboardPage apiBase={API_BASE} />
+              </ProtectedRoute>
+            </Layout>
           }
         />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/unauthorized" element={<Layout user={user} onLogout={handleLogout}><UnauthorizedPage /></Layout>} />
+        <Route path="/404" element={<Layout user={user} onLogout={handleLogout}><NotFoundPage /></Layout>} />
+        <Route path="*" element={<Layout user={user} onLogout={handleLogout}><NotFoundPage /></Layout>} />
       </Routes>
-    </Layout>
+    </>
   );
 }
 

@@ -8,5 +8,14 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Avoid embedding library names in chunk filenames for fingerprinting
+        chunkFileNames: "assets/[name]-[hash].js",
+        entryFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash][extname]",
+      },
+    },
   },
 });

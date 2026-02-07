@@ -3,7 +3,8 @@ from django.db import transaction
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
-from .models import Post, Profile
+from core.middleware import get_client_ip
+from .models import AuditLog, Post, Profile
 from .serializers import (
     LoginSerializer,
     PostSerializer,
@@ -26,11 +27,35 @@ class LoginView(views.APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         login(request, user)
+        try:
+            AuditLog.objects.create(
+                user=user,
+                ip_address=get_client_ip(request),
+                path=request.path,
+                method=request.method,
+                action="login",
+                details={},
+            )
+        except Exception:
+            pass
         return Response(UserSerializer(user).data)
 
 
 class LogoutView(views.APIView):
     def post(self, request, *args, **kwargs):
+        user = request.user
+        try:
+            if user.is_authenticated:
+                AuditLog.objects.create(
+                    user=user,
+                    ip_address=get_client_ip(request),
+                    path=request.path,
+                    method=request.method,
+                    action="logout",
+                    details={},
+                )
+        except Exception:
+            pass
         logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
 

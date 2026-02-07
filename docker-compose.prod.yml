@@ -1,0 +1,4 @@
+# Production override: do not expose backend to host; only nginx on 80
+services:
+  backend:
+    ports: []

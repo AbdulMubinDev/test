@@ -23,14 +23,16 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "core.middleware.BlockBannedIPMiddleware",  # Block banned IPs before anything else
     "django.middleware.common.CommonMiddleware",
-    "core.middleware.CsrfExemptApiMiddleware",  # Custom CSRF middleware that exempts API
-    "django.middleware.csrf.CsrfViewMiddleware",  # Still needed for admin and other views
+    "core.middleware.CsrfExemptApiMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "core.middleware.UnauthorizedAccessLoggingMiddleware",  # Log unauthorized access attempts
-    "core.middleware.SecurityHeadersMiddleware",  # Add security headers
+    "core.middleware.UnauthorizedAccessLoggingMiddleware",
+    "core.middleware.TrafficLoggingMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
